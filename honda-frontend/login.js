@@ -18,10 +18,7 @@ roleSel.addEventListener('change', () => {
   setError('');
 });
 
-$('#demoAgent').onclick = () => {
-  saveAuth({ name: 'Demo Agent', role: 'agent', remember: 1 });
-  location.href = './index.html';
-};
+// demoAgent button removed
 
 form.addEventListener('submit', (e) => {
   e.preventDefault();
