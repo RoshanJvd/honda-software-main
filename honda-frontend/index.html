@@ -160,6 +160,22 @@
       </form>
     </dialog>
 
+    <!-- Auth Modal for Role Switch (was missing elements causing cancelBtn undefined) -->
+    <dialog id="authModal">
+      <form method="dialog" id="authForm" class="modal">
+        <h3>Authenticate Role</h3>
+        <div class="grid2">
+          <label>Username <input id="authUsername" required /></label>
+          <label>Password <input id="authPassword" type="password" required /></label>
+        </div>
+        <div id="authError" style="color:#b91c1c;display:none;margin-top:6px"></div>
+        <menu>
+          <button id="cancelBtn" value="cancel" class="ghost">Cancel</button>
+          <button type="submit" value="ok" class="primary">Login</button>
+        </menu>
+      </form>
+    </dialog>
+
     <!-- Toast container -->
     <div id="toast"></div>
 
@@ -181,41 +197,47 @@
           window.location.href = "login.html";
         }
       })();
-      // --- Auth for Role Switch ---
-      const roleSelect = document.getElementById("roleSelect");
-      const authModal = document.getElementById("authModal");
-      const authForm = document.getElementById("authForm");
-      const authError = document.getElementById("authError");
-      let lastRole = roleSelect.value;
-      let pendingRole = null;
+  // --- Auth for Role Switch ---
+  const roleSelect = document.getElementById("roleSelect");
+  const authModal = document.getElementById("authModal");
+  const authForm = document.getElementById("authForm");
+  const authError = document.getElementById("authError");
+  const cancelBtn = document.getElementById("cancelBtn");
+  let lastRole = roleSelect ? roleSelect.value : 'agent';
+  let pendingRole = null;
       // Example credentials (replace with your own logic or backend call)
       const credentials = {
         admin: { username: "admin", password: "admin123" },
         agent: { username: "agent", password: "agent123" },
       };
 
-      roleSelect.addEventListener("change", (e) => {
-        const selectedRole = e.target.value;
-        authError.style.display = "none";
-        authForm.reset();
-        if (selectedRole === "admin" || selectedRole === "agent") {
-          pendingRole = selectedRole;
-          authModal.showModal();
-        } else {
-          // For inventory/service, switch role immediately and do not show modal
-          lastRole = selectedRole;
-          roleSelect.value = selectedRole;
-          pendingRole = null;
-        }
-      });
+      if (roleSelect) {
+        roleSelect.addEventListener("change", (e) => {
+          const selectedRole = e.target.value;
+          if (authError) authError.style.display = "none";
+          if (authForm) authForm.reset();
+          if (selectedRole === "admin" || selectedRole === "agent") {
+            pendingRole = selectedRole;
+            if (authModal) authModal.showModal();
+          } else {
+            // For inventory/service, switch role immediately and do not show modal
+            lastRole = selectedRole;
+            roleSelect.value = selectedRole;
+            pendingRole = null;
+          }
+        });
+      }
 
-      // Handle Cancel button / closing the dialog
-      cancelBtn.addEventListener("click", () => {
-        authModal.close(); // closes modal
-        roleSelect.value = lastRole; // revert role
-        pendingRole = null;
-        authError.style.display = "none";
-      });
+      // Handle Cancel button / closing the dialog (guard nulls)
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          if (authModal) authModal.close(); // closes modal
+          if (roleSelect) roleSelect.value = lastRole; // revert role
+          pendingRole = null;
+          if (authError) authError.style.display = "none";
+        });
+      }
 
       // Handle Login
       authForm.addEventListener("submit", (e) => {
