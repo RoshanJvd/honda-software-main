@@ -1,5 +1,5 @@
 // backend.js (ES module)
-const base = window.__API_BASE || "http://localhost:4000/api";
+const base = "https://honda-software-main.onrender.com/api";
 let role = (JSON.parse(localStorage.getItem("role") || '"agent"') || "agent");
 const headers = () => ({ "Content-Type": "application/json", "x-role": role });
 
