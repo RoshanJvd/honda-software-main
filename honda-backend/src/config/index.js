@@ -1,6 +1,9 @@
 import 'dotenv/config';
 export const PORT = Number(process.env.PORT || 4000);
 export const MONGO_URI = process.env.MONGO_URI;
+export const CORS_ORIGIN = process.env.CORS_ORIGIN || ['https://honda-software-main.vercel.app', 'http://localhost:5500', 'http://127.0.0.1:5500'];rt 'dotenv/config';
+export const PORT = Number(process.env.PORT || 4000);
+export const MONGO_URI = process.env.MONGO_URI;
 export const CORS_ORIGIN = process.env.CORS_ORIGIN || [
   'https://honda-software-main.vercel.app',
   'http://localhost:3000',
