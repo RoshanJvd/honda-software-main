@@ -1,5 +1,5 @@
 // api.js
-export const API_BASE = (window.__API_BASE || "http://localhost:4000/api").replace(/\/+$/, "");
+export const API_BASE = (window.__API_BASE || "https://honda-software-main.onrender.com/api").replace(/\/+$/, "");
 
 async function request(path, { method = "GET", body, headers = {} } = {}) {
   const res = await fetch(API_BASE + path, {
