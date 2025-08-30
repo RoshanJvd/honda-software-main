@@ -205,12 +205,7 @@
   const cancelBtn = document.getElementById("cancelBtn");
   let lastRole = roleSelect ? roleSelect.value : 'agent';
   let pendingRole = null;
-      // Example credentials (replace with your own logic or backend call)
-      const credentials = {
-        admin: { username: "admin", password: "admin123" },
-        agent: { username: "agent", password: "agent123" },
-      };
-
+      // Auth modal handling: validate admin using ADMIN_KEY; agent requires no password
       if (roleSelect) {
         roleSelect.addEventListener("change", (e) => {
           const selectedRole = e.target.value;
@@ -239,39 +234,43 @@
         });
       }
 
-      // Handle Login
-      authForm.addEventListener("submit", (e) => {
-        e.preventDefault();
+      // Handle Login (use ADMIN_KEY for admin)
+      if (authForm) {
+        authForm.addEventListener("submit", (e) => {
+          e.preventDefault();
 
-        const username = document.getElementById("authUsername").value.trim();
-        const password = document.getElementById("authPassword").value.trim();
-        let valid = false;
+          const password = document.getElementById("authPassword")?.value.trim() || '';
 
-        if (pendingRole && credentials[pendingRole]) {
-          valid =
-            username === credentials[pendingRole].username &&
-            password === credentials[pendingRole].password;
-        }
+          if (!pendingRole) {
+            if (authError) { authError.textContent = 'No role selected'; authError.style.display = 'block'; }
+            return;
+          }
 
-        if (valid) {
+          if (pendingRole === 'admin') {
+            if (password !== (window.ADMIN_KEY || 'yahya123')) {
+              if (authError) { authError.textContent = 'Invalid admin password!'; authError.style.display = 'block'; }
+              if (roleSelect) roleSelect.value = lastRole;
+              return;
+            }
+          }
+
+          // success: accept agent or admin
           lastRole = pendingRole;
-          roleSelect.value = pendingRole;
+          if (roleSelect) roleSelect.value = pendingRole;
           pendingRole = null;
-          authError.style.display = "none";
-          authModal.close();
-        } else {
-          authError.textContent = "Invalid credentials!";
-          authError.style.display = "block";
-          roleSelect.value = lastRole; // revert selection
-        }
-      });
+          if (authError) authError.style.display = 'none';
+          if (authModal) authModal.close();
+        });
+      }
 
-      // Optional: support Esc key to cancel
-      authModal.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          authModal.close("cancel");
-        }
-      });
+      // Optional: support Esc key to cancel (guard)
+      if (authModal) {
+        authModal.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            authModal.close("cancel");
+          }
+        });
+      }
 
       // Register the Service Worker
       if ("serviceWorker" in navigator) {

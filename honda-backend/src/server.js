@@ -5,5 +5,5 @@ import { PORT } from './config/index.js';
 (async () => {
   await connectDB();
   const app = createApp();
-  app.listen(PORT, () => console.log(`API listening on http://localhost:${PORT}`));
+  const server = app.listen(PORT, () => console.log(`API listening on port ${server.address().port}`));
 })();
