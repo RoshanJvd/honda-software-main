@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Master Honda — Spare Parts & Workshop Suite</title>
+    <meta name="theme-color" content="#d32f2f" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="Atlas-Honda-logo.jpg" sizes="192x192" />
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Chart.js, jsPDF, XLSX, QR libs (UMD builds) -->
+    <!-- third-party libs (UMD builds, no modules needed) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.13/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <!-- your app (as ES modules) -->
+    <script type="module" src="./api.js"></script>
+    <script>
+      window.__API_BASE = "http://localhost:4000/api";
+    </script>
+    <script>
+      window.ADMIN_KEY = window.ADMIN_KEY || "yahya123";
+    </script>
+    <script type="module" src="./backend.js"></script>
+    <script type="module" src="./APP.JS"></script>
+  </head>
+  <body>
+    <button
+      id="installPWA"
+      style="
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+      "
+    >
+      Install App
+    </button>
+    <!-- Auth Modal for Role Switch -->
+
+    <div class="app">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <div class="brand">
+          <img
+            src="Atlas-Honda-logo.jpg"
+            alt="Atlas Honda"
+            onerror="this.style.display='none'"
+          />
+          <div>
+            <h1>Master Honda</h1>
+            <small>Spare Parts & Workshop</small>
+          </div>
+          <!-- Example in your top bar -->
+        </div>
+
+        <nav id="nav">
+          <button data-view="dashboard" class="active">Dashboard</button>
+          <button data-view="inventory">Inventory</button>
+          <button data-view="billing">Billing</button>
+          <button data-view="returns">Returns/Refunds</button>
+          <button data-view="workshop">Service Jobs</button>
+          <button data-view="reports">Reports</button>
+        </nav>
+        <div
+          id="userArea"
+          style="
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+          "
+        >
+          <span id="userBadge" class="badge"></span>
+          <button id="logoutBtn" class="ghost">Logout</button>
+        </div>
+        <footer class="sidebar-footer">
+          v1.2 — SPA (LocalStorage)
+          <div class="muted">Admin • Agent • Inventory • Service</div>
+        </footer>
+      </aside>
+
+      <!-- Main -->
+      <main class="main">
+        <!-- Topbar -->
+        <header class="topbar">
+          <button class="hamburger" id="hamburger" aria-label="Toggle Menu">
+            ☰
+          </button>
+          <input
+            id="globalSearch"
+            type="search"
+            placeholder="Search items, invoices, customers…"
+          />
+          <div class="right">
+            <label class="role">
+              Role
+              <select id="roleSelect">
+                <option value="agent" selected>Agent</option>
+                <option value="admin">Admin</option>
+                <option value="inventory">Inventory</option>
+                <option value="service">Service</option>
+              </select>
+            </label>
+            <div class="menu">
+              <button id="backupBtn" title="Export backup">⭳</button>
+              <button id="restoreBtn" title="Import backup">⭱</button>
+              <input
+                id="restoreFile"
+                type="file"
+                accept="application/json"
+                hidden
+              />
+            </div>
+          </div>
+        </header>
+
+        <!-- Dynamic View -->
+        <section id="view" class="view"></section>
+      </main>
+    </div>
+
+    <!-- Inventory Modal -->
+    <dialog id="itemModal">
+      <form method="dialog" id="itemForm" class="modal">
+        <h3 id="itemModalTitle">Add Item</h3>
+        <div class="grid2">
+          <label> Name <input name="name" required /> </label>
+          <label> Code <input name="code" required /> </label>
+          <label>
+            Qty <input name="qty" type="number" min="0" step="1" required />
+          </label>
+          <label>
+            Low Stock
+            <input name="low" type="number" min="0" step="1" value="5" />
+          </label>
+          <label>
+            Purchase
+            <input name="buy" type="number" min="0" step="0.01" required />
+          </label>
+          <label>
+            Sell
+            <input name="sell" type="number" min="0" step="0.01" required />
+          </label>
+          <label class="full"> Supplier <input name="supplier" /> </label>
+          <label class="full">
+            Description <textarea name="desc" rows="2"></textarea>
+          </label>
+        </div>
+        <menu>
+          <button value="cancel" class="ghost">Cancel</button>
+          <button value="ok" class="primary">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <!-- Toast container -->
+    <div id="toast"></div>
+
+    <!-- App Logic -->
+    <script>
+      // Logout button logic
+      const logoutBtn = document.getElementById("logoutBtn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+          localStorage.removeItem('auth.user');
+          sessionStorage.clear();
+          window.location.href = "login.html";
+        });
+      }
+      // Force login screen on every app load
+      (function forceLoginOnLoad() {
+        const user = localStorage.getItem('auth.user');
+        if (!user) {
+          window.location.href = "login.html";
+        }
+      })();
+      // --- Auth for Role Switch ---
+      const roleSelect = document.getElementById("roleSelect");
+      const authModal = document.getElementById("authModal");
+      const authForm = document.getElementById("authForm");
+      const authError = document.getElementById("authError");
+      let lastRole = roleSelect.value;
+      let pendingRole = null;
+      // Example credentials (replace with your own logic or backend call)
+      const credentials = {
+        admin: { username: "admin", password: "admin123" },
+        agent: { username: "agent", password: "agent123" },
+      };
+
+      roleSelect.addEventListener("change", (e) => {
+        const selectedRole = e.target.value;
+        authError.style.display = "none";
+        authForm.reset();
+        if (selectedRole === "admin" || selectedRole === "agent") {
+          pendingRole = selectedRole;
+          authModal.showModal();
+        } else {
+          // For inventory/service, switch role immediately and do not show modal
+          lastRole = selectedRole;
+          roleSelect.value = selectedRole;
+          pendingRole = null;
+        }
+      });
+
+      // Handle Cancel button / closing the dialog
+      cancelBtn.addEventListener("click", () => {
+        authModal.close(); // closes modal
+        roleSelect.value = lastRole; // revert role
+        pendingRole = null;
+        authError.style.display = "none";
+      });
+
+      // Handle Login
+      authForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById("authUsername").value.trim();
+        const password = document.getElementById("authPassword").value.trim();
+        let valid = false;
+
+        if (pendingRole && credentials[pendingRole]) {
+          valid =
+            username === credentials[pendingRole].username &&
+            password === credentials[pendingRole].password;
+        }
+
+        if (valid) {
+          lastRole = pendingRole;
+          roleSelect.value = pendingRole;
+          pendingRole = null;
+          authError.style.display = "none";
+          authModal.close();
+        } else {
+          authError.textContent = "Invalid credentials!";
+          authError.style.display = "block";
+          roleSelect.value = lastRole; // revert selection
+        }
+      });
+
+      // Optional: support Esc key to cancel
+      authModal.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          authModal.close("cancel");
+        }
+      });
+
+      // Register the Service Worker
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker
+            .register("./service-worker.js")
+            .then((reg) => console.log("SW registered:", reg))
+            .catch((err) => console.log("SW registration failed:", err));
+        });
+      }
+
+      // PWA install prompt logic
+      let deferredPrompt;
+      const installBtn = document.getElementById("installPWA");
+
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        console.log("beforeinstallprompt fired!", e); // Prevent Chrome's default mini-infobar
+        deferredPrompt = e; // Save the event
+        installBtn.style.display = "block"; // Show your custom button
+      });
+
+      installBtn.addEventListener("click", () => {
+        installBtn.style.display = "none";
+        if (deferredPrompt) {
+          console.log("User choice:", choice.outcome);
+          deferredPrompt.prompt(); // Show install prompt
+          deferredPrompt.userChoice.then((choiceResult) => {
+            deferredPrompt = null; // Reset
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
