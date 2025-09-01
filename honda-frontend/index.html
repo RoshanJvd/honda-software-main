@@ -21,12 +21,13 @@
     <!-- your app (as ES modules) -->
     <script type="module" src="./api.js"></script>
     <script>
-      window.__API_BASE = "http://localhost:4000/api";
+      window.__API_BASE = "https://honda-software-main.onrender.com/api";
     </script>
     <script>
       window.ADMIN_KEY = window.ADMIN_KEY || "yahya123";
     </script>
     <script type="module" src="./backend.js"></script>
+    <script type="module" src="./barcode-helper.js"></script>
     <script type="module" src="./APP.JS"></script>
   </head>
   <body>
@@ -102,13 +103,13 @@
             <label class="role">
               Role
               <select id="roleSelect">
-                <option value="agent" selected>Agent</option>
-                <option value="admin">Admin</option>
-                <option value="inventory">Inventory</option>
+                <option value="inventory" selected>Inventory</option>
                 <option value="service">Service</option>
+                <option value="admin">Admin</option>
               </select>
             </label>
             <button id="manageUsersBtn" class="ghost" style="display:none;margin-left:8px">Manage Users</button>
+            <button id="assignItemsBtn" class="ghost" style="display:none;margin-left:8px">Assign Items</button>
             <div class="menu">
               <button id="backupBtn" title="Export backup">⭳</button>
               <button id="restoreBtn" title="Import backup">⭱</button>
@@ -183,6 +184,36 @@
           <button id="closeUsers" class="ghost">Close</button>
         </div>
         <div id="usersList" style="margin-top:10px"></div>
+      </form>
+    </dialog>
+
+    <!-- Assign Items/Services Modal (admin only) -->
+    <dialog id="assignModal">
+      <form id="assignForm" class="modal">
+        <h3>Assign Items & Services to Users</h3>
+        <div class="grid2">
+          <label>Select User
+            <select id="assignUser">
+              <option value="">Select a user...</option>
+            </select>
+          </label>
+          <label>Type
+            <select id="assignType">
+              <option value="items">Items</option>
+              <option value="services">Services</option>
+            </select>
+          </label>
+        </div>
+        <div style="margin-top:10px">
+          <label>Search Items/Services
+            <input id="assignSearch" placeholder="Type to search..."/>
+          </label>
+        </div>
+        <div id="assignList" style="max-height:200px;overflow-y:auto;margin-top:10px;border:1px solid #ddd;padding:10px"></div>
+        <div style="margin-top:10px">
+          <button id="saveAssignments" class="primary">Save Assignments</button>
+          <button id="closeAssign" class="ghost">Close</button>
+        </div>
       </form>
     </dialog>
 
@@ -338,22 +369,33 @@
       const closeUsers = document.getElementById('closeUsers');
       const usersList = document.getElementById('usersList');
 
-      function loadUsers() {
-        try { return JSON.parse(localStorage.getItem('users') || '[]'); } catch { return []; }
+      async function loadUsers() {
+        try {
+          const response = await fetch(window.__API_BASE + '/users', {
+            headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            return data.data || [];
+          }
+          return [];
+        } catch (e) {
+          console.error('Failed to load users:', e);
+          return [];
+        }
       }
-      function saveUsers(u) { localStorage.setItem('users', JSON.stringify(u)); }
 
-      function renderUsers() {
-        const users = loadUsers();
+      async function renderUsers() {
+        const users = await loadUsers();
         if (!usersList) return;
         if (!users.length) {
           usersList.innerHTML = '<div class="muted">No users found. Use the form above to add users.</div>';
           return;
         }
-        usersList.innerHTML = users.map((u, i) =>
+        usersList.innerHTML = users.map((u) =>
           `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee">
             <div><strong>${escapeHtml(u.name)}</strong> <small class="muted">${escapeHtml(u.role)}</small></div>
-            <div><button class="ghost delUserBtn" data-i="${i}">Delete</button></div>
+            <div><button class="ghost delUserBtn" data-id="${u._id}">Delete</button></div>
           </div>`
         ).join('');
       }
@@ -392,23 +434,46 @@
       }
 
       if (addUserBtn) {
-        addUserBtn.addEventListener('click', (ev) => {
+        addUserBtn.addEventListener('click', async (ev) => {
           ev.preventDefault();
           const name = document.getElementById('newUserName')?.value?.trim();
-          const role = document.getElementById('newUserRole')?.value || 'agent';
+          const role = document.getElementById('newUserRole')?.value || 'inventory';
           const pass = document.getElementById('newUserPass')?.value || '';
+
           if (!name) return alert('Name is required');
-          const users = loadUsers();
-          // prevent duplicate same-name+role
-          const exists = users.find(u => u.name.toLowerCase() === name.toLowerCase() && u.role === role);
-          if (exists) return alert('User with same name and role already exists');
-          users.push({ name, role, pass });
-          saveUsers(users);
-          // clear inputs
-          document.getElementById('newUserName').value = '';
-          document.getElementById('newUserPass').value = '';
-          document.getElementById('newUserRole').value = 'agent';
-          renderUsers();
+
+          try {
+            // Check for duplicate users
+            const users = await loadUsers();
+            const exists = users.find(u => u.name.toLowerCase() === name.toLowerCase() && u.role === role);
+            if (exists) return alert('User with same name and role already exists');
+
+            // Create user via backend API
+            const response = await fetch(window.__API_BASE + '/users', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-role': 'admin'
+              },
+              body: JSON.stringify({ name, role, password: pass })
+            });
+
+            if (response.ok) {
+              const newUser = await response.json();
+              alert(`User "${name}" created successfully!`);
+              // clear inputs
+              document.getElementById('newUserName').value = '';
+              document.getElementById('newUserPass').value = '';
+              document.getElementById('newUserRole').value = 'inventory';
+              renderUsers();
+            } else {
+              const error = await response.json();
+              alert('Failed to create user: ' + (error.message || 'Unknown error'));
+            }
+          } catch (error) {
+            console.error('Error creating user:', error);
+            alert('Error creating user: ' + error.message);
+          }
         });
       }
 
@@ -421,18 +486,223 @@
 
       // Delegate delete clicks
       if (usersList) {
-        usersList.addEventListener('click', (ev) => {
+        usersList.addEventListener('click', async (ev) => {
           const btn = ev.target.closest('.delUserBtn');
           if (!btn) return;
-          const idx = Number(btn.dataset.i);
-          if (!Number.isFinite(idx)) return;
-          const users = loadUsers();
-          const u = users[idx];
+          const userId = btn.dataset.id;
+          if (!userId) return;
+
+          const users = await loadUsers();
+          const u = users.find(user => user._id === userId);
           if (!u) return;
+
           if (!confirm(`Delete user ${u.name} (${u.role})?`)) return;
-          users.splice(idx,1);
-          saveUsers(users);
-          renderUsers();
+
+          try {
+            const response = await fetch(window.__API_BASE + `/users/${userId}`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-role': 'admin'
+              }
+            });
+
+            if (response.ok) {
+              alert(`User "${u.name}" deleted successfully!`);
+              renderUsers();
+            } else {
+              const error = await response.json();
+              alert('Failed to delete user: ' + (error.message || 'Unknown error'));
+            }
+          } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('Error deleting user: ' + error.message);
+          }
+        });
+      }
+
+      // --- Assign Items/Services (Admin only) ---
+      const assignItemsBtn = document.getElementById('assignItemsBtn');
+      const assignModal = document.getElementById('assignModal');
+      const assignForm = document.getElementById('assignForm');
+      const assignUser = document.getElementById('assignUser');
+      const assignType = document.getElementById('assignType');
+      const assignSearch = document.getElementById('assignSearch');
+      const assignList = document.getElementById('assignList');
+      const saveAssignments = document.getElementById('saveAssignments');
+      const closeAssign = document.getElementById('closeAssign');
+
+      let currentAssignments = [];
+      let allItems = [];
+      let allServices = [];
+
+      // Show Assign Items button only for admin users
+      (function initAssignItemsButton(){
+        try {
+          const current = JSON.parse(localStorage.getItem('auth.user')||'null');
+          if (assignItemsBtn) assignItemsBtn.style.display = (current && current.role === 'admin') ? 'inline-block' : 'none';
+        } catch(e) {
+          if (assignItemsBtn) assignItemsBtn.style.display = 'none';
+        }
+      })();
+
+      async function loadItemsAndServices() {
+        try {
+          // Load items and services from backend
+          const itemsResponse = await fetch(window.__API_BASE + '/items?limit=1000', {
+            headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
+          });
+          const servicesResponse = await fetch(window.__API_BASE + '/services?limit=1000', {
+            headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
+          });
+          
+          if (itemsResponse.ok) {
+            const itemsData = await itemsResponse.json();
+            allItems = itemsData.data || [];
+          }
+          
+          if (servicesResponse.ok) {
+            const servicesData = await servicesResponse.json();
+            allServices = servicesData.data || [];
+          }
+        } catch (e) {
+          console.error('Failed to load items/services:', e);
+        }
+      }
+
+      async function populateUserSelect() {
+        try {
+          const users = await backend.users.list();
+          if (!assignUser) return;
+          assignUser.innerHTML = '<option value="">Select a user...</option>';
+          users.forEach(user => {
+            assignUser.innerHTML += `<option value="${user._id}" data-name="${user.name}">${user.name} (${user.role})</option>`;
+          });
+        } catch (e) {
+          console.error('Failed to load users:', e);
+        }
+      }
+
+      async function renderAssignList() {
+        if (!assignList) return;
+        const type = assignType?.value || 'items';
+        const searchTerm = (assignSearch?.value || '').toLowerCase();
+        const items = type === 'items' ? allItems : allServices;
+        
+        const filtered = items.filter(item =>
+          (item.name || '').toLowerCase().includes(searchTerm) ||
+          (item.sku || item.code || '').toLowerCase().includes(searchTerm)
+        );
+
+        // Load current assignments for selected user
+        const userId = assignUser?.value;
+        if (userId) {
+          try {
+            const assignments = await backend.users.getAssignments(userId);
+            const assignedIds = type === 'items'
+              ? assignments.assignedItems.map(item => item._id)
+              : assignments.assignedServices.map(service => service._id);
+            currentAssignments = assignedIds;
+          } catch (e) {
+            console.error('Failed to load assignments:', e);
+            currentAssignments = [];
+          }
+        }
+
+        assignList.innerHTML = filtered.map(item => {
+          const isAssigned = currentAssignments.includes(item._id);
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:5px;border-bottom:1px solid #eee">
+              <div>
+                <strong>${escapeHtml(item.name)}</strong>
+                ${item.sku ? `<small class="muted"> - ${escapeHtml(item.sku)}</small>` : ''}
+              </div>
+              <label>
+                <input type="checkbox" data-id="${item._id}" ${isAssigned ? 'checked' : ''}/>
+                Assign
+              </label>
+            </div>
+          `;
+        }).join('') || '<div class="muted">No items found</div>';
+      }
+
+      if (assignItemsBtn) {
+        assignItemsBtn.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const current = JSON.parse(localStorage.getItem('auth.user')||'null');
+          if (!current || current.role !== 'admin') return alert('Only admins can assign items');
+          
+          await loadItemsAndServices();
+          populateUserSelect();
+          currentAssignments = [];
+          if (assignModal) assignModal.showModal();
+          renderAssignList();
+        });
+      }
+
+      if (assignType) {
+        assignType.addEventListener('change', renderAssignList);
+      }
+
+      if (assignSearch) {
+        assignSearch.addEventListener('input', renderAssignList);
+      }
+
+      if (assignUser) {
+        assignUser.addEventListener('change', () => {
+          currentAssignments = [];
+          renderAssignList();
+        });
+      }
+
+      if (assignList) {
+        assignList.addEventListener('change', (ev) => {
+          if (ev.target.type === 'checkbox') {
+            const itemId = ev.target.dataset.id;
+            if (ev.target.checked) {
+              if (!currentAssignments.includes(itemId)) {
+                currentAssignments.push(itemId);
+              }
+            } else {
+              const index = currentAssignments.indexOf(itemId);
+              if (index > -1) {
+                currentAssignments.splice(index, 1);
+              }
+            }
+          }
+        });
+      }
+
+      if (saveAssignments) {
+        saveAssignments.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const userName = assignUser?.value;
+          const type = assignType?.value || 'items';
+          
+          if (!userName) return alert('Please select a user');
+          
+          try {
+            // Find user by name
+            const users = loadUsers();
+            const user = users.find(u => u.name === userName);
+            if (!user) return alert('User not found');
+
+            // Save assignments to localStorage for now (can be extended to backend)
+            const assignmentKey = `assignments_${type}_${userName}`;
+            localStorage.setItem(assignmentKey, JSON.stringify(currentAssignments));
+            
+            alert(`Successfully assigned ${currentAssignments.length} ${type} to ${userName}`);
+            if (assignModal) assignModal.close();
+          } catch (e) {
+            alert('Failed to save assignments: ' + e.message);
+          }
+        });
+      }
+
+      if (closeAssign) {
+        closeAssign.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          if (assignModal) assignModal.close();
         });
       }
     </script>

@@ -13,5 +13,7 @@ r.delete('/:id', requireRole(['admin']), c.remove);
 r.post('/:id/adjust', requireRole(['admin','inventory']), c.adjust);
 
 r.post('/import', requireRole(['admin','inventory']), upload.single('file'), c.importXlsx);
+// scan by sku or barcode (e.g. barcode reader provides code)
+r.get('/scan/:code', requireRole(['admin','agent','inventory','service']), c.scan);
 
 export default r;

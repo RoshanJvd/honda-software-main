@@ -2,57 +2,100 @@
 const $ = (s, c=document) => c.querySelector(s);
 const form = $('#loginForm');
 const roleSel = $('#role');
-const adminBlock = $('#adminBlock');
 const err = $('#err');
 
 function setError(msg='') { err.textContent = msg; }
-function saveAuth({ name, role, remember }) {
-  const user = { name: name || 'User', role, ts: Date.now() };
+function saveAuth({ name, role, userId }) {
+  const user = { name: name || 'User', role, id: userId, ts: Date.now() };
   localStorage.setItem('auth.user', JSON.stringify(user));
   localStorage.setItem('role', JSON.stringify(role)); // keep legacy compatibility
-  if (!remember) sessionStorage.setItem('auth.session', '1');
 }
 
-function loadUsers() {
-  try { return JSON.parse(localStorage.getItem('users') || '[]'); } catch { return []; }
-}
-function saveUsers(u) { localStorage.setItem('users', JSON.stringify(u)); }
+// API base URL - should match the backend
+const API_BASE = window.__API_BASE || "http://localhost:4000/api";
 
-// Seed admin if no users exist
-if (!loadUsers().length) {
-  saveUsers([{ name: 'Administrator', role: 'admin', pass: (window.ADMIN_KEY || 'yahya123') }]);
-}
+// Authenticate user against backend
+async function authenticateUser(name, role, password) {
+  try {
+    const response = await fetch(`${API_BASE}/users/authenticate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, role, password })
+    });
 
-roleSel.addEventListener('change', () => {
-  adminBlock.style.display = roleSel.value === 'admin' ? 'block' : 'none';
-  setError('');
-});
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { success: false, error: 'User not found - ask admin to create your account' };
+      }
+      if (response.status === 401) {
+        return { success: false, error: 'Invalid password' };
+      }
+      return { success: false, error: 'Unable to connect to server' };
+    }
+
+    const data = await response.json();
+
+    if (data.success) {
+      return { success: true, user: data.user };
+    } else {
+      return { success: false, error: data.message || 'Authentication failed' };
+    }
+
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return { success: false, error: 'Connection error - please try again' };
+  }
+}
 
 // demoAgent button removed
 
-form.addEventListener('submit', (e) => {
+form.addEventListener('submit', async (e) => {
   e.preventDefault();
   setError('');
   const name = $('#name').value.trim();
   const role = roleSel.value;
-  const remember = $('#remember').value === '1';
+  const password = $('#password')?.value || '';
 
-  // Admin login via admin password
-  if (role === 'admin') {
-    const pass = $('#adminPass').value;
-    if (!pass || pass !== (window.ADMIN_KEY || 'yahya123')) {
-      return setError('Invalid admin password');
-    }
-    saveAuth({ name, role, remember });
-    return location.href = './index.html';
+  if (!name) {
+    return setError('Please enter your name');
   }
 
-  // Non-admins must exist in users list and match name+role
-  const users = loadUsers();
-  const found = users.find((u) => u.role === role && u.name.toLowerCase() === name.toLowerCase());
-  if (!found) return setError('User not found — ask admin to create your account');
-  // For simplicity we don't use passwords for non-admins here (could be added)
-  saveAuth({ name, role, remember });
-  location.href = './index.html';
-  location.href = './index.html';
+  // Only require password for admin users
+  if (role === 'admin' && !password) {
+    return setError('Please enter your password');
+  }
+
+  // Show loading state
+  const submitBtn = $('#loginBtn');
+  const originalText = submitBtn.textContent;
+  submitBtn.textContent = 'Signing in...';
+  submitBtn.disabled = true;
+
+  try {
+    // Authenticate user
+    const result = await authenticateUser(name, role, password);
+
+    if (result.success) {
+      // Save authentication data
+      saveAuth({
+        name: result.user.name,
+        role: result.user.role,
+        userId: result.user._id
+      });
+
+      // Redirect to main app
+      location.href = './index.html';
+    } else {
+      setError(result.error);
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    setError('Connection error - please try again');
+  } finally {
+    // Reset button state
+    submitBtn.textContent = originalText;
+    submitBtn.disabled = false;
+  }
 });

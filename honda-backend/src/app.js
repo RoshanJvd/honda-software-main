@@ -14,7 +14,7 @@ export function createApp() {
     if (!origin || allowed.indexOf(origin) !== -1 || allowed.includes('*')) {
       res.setHeader('Access-Control-Allow-Origin', origin || allowed[0] || '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,PATCH,OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-role');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-role, x-user-id');
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
     if (req.method === 'OPTIONS') return res.sendStatus(200);
@@ -23,7 +23,7 @@ export function createApp() {
   app.use(cors({
     origin: CORS_ORIGIN,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-role'],
+    allowedHeaders: ['Content-Type', 'x-role', 'x-user-id'],
     credentials: true
   }));
   app.use(express.json({ limit: '2mb' }));

@@ -1,7 +1,19 @@
 // backend.js (ES module)
-const base = "https://honda-software-main.onrender.com/api";
-let role = (JSON.parse(localStorage.getItem("role") || '"agent"') || "agent");
-const headers = () => ({ "Content-Type": "application/json", "x-role": role });
+const base = window.__API_BASE || "https://honda-software-main.onrender.com/api";
+let role = (JSON.parse(localStorage.getItem("role") || '"inventory"') || "inventory");
+let userId = null;
+
+// Get user ID from localStorage
+const authUser = JSON.parse(localStorage.getItem("auth.user") || "null");
+if (authUser && authUser.id) {
+  userId = authUser.id;
+}
+
+const headers = () => ({
+  "Content-Type": "application/json",
+  "x-role": role,
+  "x-user-id": userId
+});
 
 async function req(path, opts={}) {
   const r = await fetch(base + path, { headers: headers(), ...opts });
@@ -100,6 +112,26 @@ export const backend = {
           .slice(0,10)
           .map(name => ({ name }));
       }
+    }
+  },
+
+  users: {
+    async list() {
+      try {
+        const d = await get(`/users`);
+        return d.data || [];
+      } catch {
+        return [];
+      }
+    },
+    async assignItems(userId, itemIds) {
+      return post(`/users/${userId}/assign-items`, { itemIds });
+    },
+    async assignServices(userId, serviceIds) {
+      return post(`/users/${userId}/assign-services`, { serviceIds });
+    },
+    async getAssignments(userId) {
+      return get(`/users/${userId}/assignments`);
     }
   }
 };

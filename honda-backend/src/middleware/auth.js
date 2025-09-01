@@ -1,8 +1,11 @@
 // src/middleware/auth.js
 export function requireRole(roles = []) {
   return (req, res, next) => {
-    const role = (req.headers['x-role'] || 'agent').toString();
-    req.userRole = role; // optional: handy for logging
+  const role = (req.headers['x-role'] || 'agent').toString();
+  // user id is provided by frontend in x-user-id header in this codebase
+  const userId = req.headers['x-user-id'] || null;
+  req.userRole = role; // handy for controllers
+  req.userId = userId;
 
     // ⬇︎ Admin can do everything
     if (role === 'admin') return next();

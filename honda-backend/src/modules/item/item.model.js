@@ -3,6 +3,9 @@ import { Schema, model } from 'mongoose';
 const ItemSchema = new Schema({
   name: { type: String, required: true, index: true },
   sku: { type: String, required: true, unique: true }, // code
+  barcode: { type: String, index: true },
+  // optional field to tie this item to a user (agent) who can access it
+  assignedTo: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   qty: { type: Number, default: 0 },
   low: { type: Number, default: 5 },
   buy: { type: Number, default: 0 },

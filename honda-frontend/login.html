@@ -34,32 +34,18 @@
       <p class="sub">Choose your role. Admin can do everything.</p>
 
       <form id="loginForm" novalidate>
-        <label>Full Name</label>
-        <input id="name" name="name" placeholder="e.g., Ali Raza" autocomplete="name" />
+        <label>Name</label>
+        <input id="name" name="name" placeholder="Enter your name" autocomplete="name" required />
 
-        <div class="row">
-          <div>
-            <label>Role</label>
-            <select id="role" name="role" required>
-              <option value="agent">Agent (Billing)</option>
-              <option value="inventory">Inventory</option>
-              <option value="service">Service</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div>
-            <label>Remember me</label>
-            <select id="remember" name="remember">
-              <option value="1" selected>Yes</option>
-              <option value="0">No</option>
-            </select>
-          </div>
-        </div>
+        <label>Role</label>
+        <select id="role" name="role" required>
+          <option value="inventory">Inventory</option>
+          <option value="service">Service</option>
+          <option value="admin">Admin</option>
+        </select>
 
-        <div id="adminBlock" style="display:none">
-          <label>Admin Password</label>
-          <input id="adminPass" type="password" placeholder="••••••••" autocomplete="current-password" />
-        </div>
+        <label>Password</label>
+        <input id="password" type="password" placeholder="Enter password" autocomplete="current-password" required />
 
         <div class="err" id="err"></div>
 

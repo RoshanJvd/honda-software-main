@@ -5,6 +5,7 @@ import ret from '../modules/return/return.routes.js';
 import dashboard from '../modules/dashboard/dashboard.routes.js';
 import report from '../modules/report/report.routes.js';
 import service from '../modules/service/service.routes.js';
+import users from '../modules/user/user.routes.js';
 // ...
 
 
@@ -15,5 +16,6 @@ r.use('/returns', ret);
 r.use('/dashboard', dashboard);
 r.use('/reports', report);
 r.use('/services', service);
+r.use('/users', users);
 
 export default r;

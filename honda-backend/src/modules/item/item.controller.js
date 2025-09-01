@@ -5,9 +5,13 @@ import { Movement } from '../movement/movement.model.js';
 
 export async function list(req, res) {
   const { q = '', limit = 20, skip = 0 } = req.query;
-  const where = q
+  let where = q
     ? { $or: [{ name: new RegExp(q, 'i') }, { sku: new RegExp(q, 'i') }, { supplier: new RegExp(q, 'i') }] }
     : {};
+  // If agent role, restrict to assigned items only
+  if (req.userRole === 'agent') {
+    where = { ...where, assignedTo: req.userId };
+  }
   const [items, total] = await Promise.all([
     Item.find(where).sort({ createdAt: -1 }).skip(Number(skip)).limit(Math.min(200, Number(limit))),
     Item.countDocuments(where)
@@ -22,6 +26,16 @@ export async function create(req, res) {
     await Movement.create({ itemId: saved._id, qty: saved.qty, type: 'purchase' });
   }
   res.status(201).json(saved);
+}
+
+export async function scan(req, res) {
+  const { code } = req.params;
+  if (!code) return res.status(400).json({ message: 'code required' });
+  const where = { $or: [{ sku: code }, { barcode: code }] };
+  if (req.userRole === 'agent') where.assignedTo = req.userId;
+  const it = await Item.findOne(where);
+  if (!it) return res.status(404).json({ message: 'Not found' });
+  res.json(it);
 }
 
 export async function update(req, res) {
@@ -77,3 +91,4 @@ export async function importXlsx(req, res) {
 
   res.json({ imported: ops.length });
 }
+
