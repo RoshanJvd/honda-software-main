@@ -21,7 +21,16 @@
     <!-- your app (as ES modules) -->
     <script type="module" src="./api.js"></script>
     <script>
-      window.__API_BASE = "https://honda-software-main.onrender.com/api";
+      // Prefer local backend when running on localhost/127.0.0.1
+      (function(){
+        const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+        if (isLocal) {
+          const host = location.hostname; // keep localhost vs 127.0.0.1 consistent
+          window.__API_BASE = `http://${host}:4000/api`;
+        } else {
+          window.__API_BASE = "https://honda-software-main.onrender.com/api";
+        }
+      })();
     </script>
     <script>
       window.ADMIN_KEY = window.ADMIN_KEY || "yahya123";
@@ -83,7 +92,7 @@
         </div>
         <footer class="sidebar-footer">
           v1.2 — SPA (LocalStorage)
-          <div class="muted">Admin • Agent • Inventory • Service</div>
+          <div class="muted">Admin • Agent</div>
         </footer>
       </aside>
 
@@ -103,9 +112,8 @@
             <label class="role">
               Role
               <select id="roleSelect">
-                <option value="inventory" selected>Inventory</option>
-                <option value="service">Service</option>
                 <option value="admin">Admin</option>
+                <option value="agent" selected>Agent</option>
               </select>
             </label>
             <button id="manageUsersBtn" class="ghost" style="display:none;margin-left:8px">Manage Users</button>
@@ -172,8 +180,6 @@
           <label>Role
             <select id="newUserRole">
               <option value="agent">Agent</option>
-              <option value="inventory">Inventory</option>
-              <option value="service">Service</option>
               <option value="admin">Admin</option>
             </select>
           </label>
@@ -271,11 +277,6 @@
           if (selectedRole === "admin" || selectedRole === "agent") {
             pendingRole = selectedRole;
             if (authModal) authModal.showModal();
-          } else {
-            // For inventory/service, switch role immediately and do not show modal
-            lastRole = selectedRole;
-            roleSelect.value = selectedRole;
-            pendingRole = null;
           }
         });
       }

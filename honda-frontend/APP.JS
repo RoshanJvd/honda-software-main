@@ -121,8 +121,7 @@ class AppAgent {
     userName: u.name || "User"
   };
 
-  backend.setRole(this.state.role); 
-    this.state = { view: "dashboard", filter: "", role: Store.get("role", "agent") || "agent" };
+  backend.setRole(this.state.role);
     this.db = { items: [], invoices: [], services: [], returns: [], customers: [], movements: [] };
     this.routes = {
       dashboard: () => this.renderDashboard(),
@@ -167,52 +166,73 @@ class AppAgent {
 
   // ---- role UI
 applyRoleUI(role, { initial = false } = {}) {
-    const navBtns = $$('#nav button');
-    navBtns.forEach(b => b.style.display = 'none');
+   const navBtns = $$('#nav button');
+   navBtns.forEach(b => b.style.display = 'none');
 
-    const show = (name) => {
-      const el = document.querySelector(`#nav button[data-view="${name}"]`);
-      if (el) el.style.display = 'inline-block';
-    };
+   const show = (name) => {
+     const el = document.querySelector(`#nav button[data-view="${name}"]`);
+     if (el) el.style.display = 'inline-block';
+   };
 
-    // always visible
-    show('dashboard');
-    show('returns');
+   // always visible
+   show('dashboard');
+   show('returns');
 
-    // Direct role assignment without authentication prompt
-    switch(role) {
-      case 'agent':
-        show('billing');
-        break;
-      case 'inventory':
-        show('inventory');
-        break;
-      case 'service':
-        show('workshop');
-        break;
-      case 'admin':
-        show('inventory');
-        show('billing');
-        show('workshop');
-        show('reports');
-        show('returns');
-        break;
-    }
+   // Direct role assignment without authentication prompt
+   switch(role) {
+     case 'agent':
+       show('inventory');
+       show('billing');
+       show('workshop');
+       break;
+     case 'inventory':
+       show('inventory');
+       break;
+     case 'service':
+       show('workshop');
+       break;
+     case 'admin':
+       show('inventory');
+       show('billing');
+       show('workshop');
+       show('reports');
+       show('returns');
+       break;
+   }
 
-    if ($('#roleSelect')) $('#roleSelect').value = role;
-    this.state.role = role;
+   // Update button visibility based on role
+   const manageUsersBtn = document.getElementById('manageUsersBtn');
+   const assignItemsBtn = document.getElementById('assignItemsBtn');
+   if (manageUsersBtn) manageUsersBtn.style.display = (role === 'admin') ? 'inline-block' : 'none';
+   if (assignItemsBtn) assignItemsBtn.style.display = (role === 'admin') ? 'inline-block' : 'none';
 
-    // Update backend role
-    backend.setRole(role);
+   if ($('#roleSelect')) {
+     if (role === 'admin' || role === 'agent') {
+       $('#roleSelect').value = role;
+     } else {
+       $('#roleSelect').value = 'agent'; // default for other roles
+     }
+   }
+   this.state.role = role;
 
-    // Save role to storage
-    Store.set('role', role);
-    
-    // Go to dashboard after role change
-    if (!initial) {
-      this.go('dashboard');
-    }
-  }
+   // Update stored user role
+   const user = JSON.parse(localStorage.getItem('auth.user') || 'null');
+   if (user) {
+     user.role = role;
+     localStorage.setItem('auth.user', JSON.stringify(user));
+   }
+
+   // Update backend role
+   backend.setRole(role);
+
+   // Save role to storage
+   Store.set('role', role);
+
+   // Go to dashboard after role change
+   if (!initial) {
+     this.go('dashboard');
+   }
+ }
 
   // ---- Router
   go(view) {
@@ -309,8 +329,23 @@ applyRoleUI(role, { initial = false } = {}) {
   // ---- Inventory
   renderInventory() {
     const q = (this.state.filter || "").toLowerCase();
-    const rows = this.db.items
-      .filter((i) => [i.name, i.code, i.supplier].join(" ").toLowerCase().includes(q))
+    let items = this.db.items
+      .filter((i) => [i.name, i.code, i.supplier].join(" ").toLowerCase().includes(q));
+
+    // For agent, only show assigned items; if none are assigned, show empty.
+    if (this.state.role === 'agent') {
+      const user = getUser();
+      if (user) {
+        const assignmentKey = `assignments_items_${user.name}`;
+        const assigned = JSON.parse(localStorage.getItem(assignmentKey) || '[]');
+        items = (Array.isArray(assigned) && assigned.length > 0)
+          ? items.filter(i => assigned.includes(i.id))
+          : [];
+      }
+    }
+
+    const isAdmin = this.state.role === "admin";
+    const rows = items
       .map((i) => `
         <tr>
           <td>${i.name}<div class="badge">${i.code}</div></td>
@@ -320,8 +355,8 @@ applyRoleUI(role, { initial = false } = {}) {
           <td>${i.supplier || "-"}</td>
           <td>
             <button class="ghost" data-act="qr"   data-id="${i.id}">QR</button>
-            <button class="ghost" data-act="edit" data-id="${i.id}">Edit</button>
-            <button class="ghost" data-act="del"  data-id="${i.id}">Del</button>
+            ${isAdmin ? `<button class="ghost" data-act="edit" data-id="${i.id}">Edit</button>` : ''}
+            ${isAdmin ? `<button class="ghost" data-act="del"  data-id="${i.id}">Del</button>` : ''}
           </td>
         </tr>
       `).join("");
@@ -331,7 +366,6 @@ applyRoleUI(role, { initial = false } = {}) {
     $("#view").innerHTML = `
       <div class="actions">
         <button class="primary" id="addItemBtn">+ Add Item</button>
-        <button class="ghost" id="scanBtn">Scan QR</button>
         ${exportInvBtn}
       </div>
       <div class="card">
@@ -354,9 +388,8 @@ applyRoleUI(role, { initial = false } = {}) {
       </div>
     `;
 
-    $("#addItemBtn").onclick = () => this.openItemModal();
+    if (isAdmin) { $("#addItemBtn").onclick = () => this.openItemModal(); }
     $("#exportInv")?.addEventListener("click", () => this.exportInventory());
-    $("#scanBtn").onclick = () => this.startScanner();
     $("#stopScan")?.addEventListener("click", () => this.stopScanner());
     $$("#view [data-act]").forEach((btn) => (btn.onclick = (e) => this.inventoryAction(e.currentTarget)));
   }
@@ -379,13 +412,11 @@ applyRoleUI(role, { initial = false } = {}) {
       const payloadUI = { id: item?.id || uid("itm_"), name: data.name, code: data.code, qty: +data.qty, low: +data.low || 5, buy: +data.buy, sell: +data.sell, supplier: data.supplier, desc: data.desc };
       try {
         if (item) {
-          const delta = (+data.qty) - (item.qty || 0);
           await backend.items.update(item.id, buildItemPatchFromUI(payloadUI));
-          if (delta !== 0) await backend.items.adjust(item.id, delta, "adjustment");
-          await backend.items.refresh(); await backend.movements.refresh();
+          await backend.items.refresh();
         } else {
           await backend.items.create(buildItemPatchFromUI(payloadUI));
-          await backend.items.refresh(); await backend.movements.refresh();
+          await backend.items.refresh();
         }
         await this.syncFromBackend();
         this.toast(item ? "Item updated" : "Item added");
@@ -410,7 +441,14 @@ applyRoleUI(role, { initial = false } = {}) {
     if (btn.dataset.act === "qr") {
       const box = $("#qrBox");
       box.innerHTML = "";
-      new QRCode(box, { text: item.code, width: 120, height: 120 });
+      const qrText = [
+        `Name: ${item.name}`,
+        `Code: ${item.code}`,
+        `Price: Rs ${item.sell}`,
+        `Qty: ${item.qty}`,
+        item.supplier ? `Supplier: ${item.supplier}` : null
+      ].filter(Boolean).join("\n");
+      new QRCode(box, { text: qrText, width: 120, height: 120 });
       // Show download button after QR is rendered
       setTimeout(() => {
         const dlBtn = $("#downloadQR");

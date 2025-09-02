@@ -21,6 +21,29 @@ export async function list(req, res) {
 
 export async function create(req, res) {
   const payload = req.body; // { customerName, discount, tax, lines: [{kind, refId, qty, price}] }
+
+  // For agents, validate that they can only use assigned items/services
+  if (req.userRole === 'agent' && req.userId) {
+    const { User } = await import('../user/user.model.js');
+    const user = await User.findById(req.userId);
+    if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
+
+    const assignedItemIds = new Set((user.assignedItems || []).map(id => id.toString()));
+    const assignedServiceIds = new Set((user.assignedServices || []).map(id => id.toString()));
+
+    for (const ln of payload.lines || []) {
+      if (ln.kind === 'item') {
+        if (!assignedItemIds.has(ln.refId.toString())) {
+          throw Object.assign(new Error('Access denied to this item'), { status: 403 });
+        }
+      } else if (ln.kind === 'service') {
+        if (!assignedServiceIds.has(ln.refId.toString())) {
+          throw Object.assign(new Error('Access denied to this service'), { status: 403 });
+        }
+      }
+    }
+  }
+
   const session = await mongoose.startSession();
   let saved;
   await session.withTransaction(async () => {
