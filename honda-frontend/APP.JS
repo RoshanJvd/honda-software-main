@@ -99,9 +99,13 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('auth.user') || 'null'); }
   catch { return null; }
 }
+
 function requireLogin() {
   const u = getUser();
-  if (!u) { location.href = './login.html'; return null; }
+  if (!u) { 
+    location.href = './login.html'; 
+    return null; 
+  }
   return u;
 }
 
@@ -110,18 +114,17 @@ class AppAgent {
   constructor(root) {
     this.root = root;
     
+    const u = requireLogin();  // redirects if not logged in
+    if (!u) return;
 
-  const u = requireLogin();  // redirects if not logged in
-  if (!u) return;
+    this.state = {
+      view: "dashboard",
+      filter: "",
+      role: u.role || "agent",
+      userName: u.name || "User"
+    };
 
-  this.state = {
-    view: "dashboard",
-    filter: "",
-    role: u.role || "agent",
-    userName: u.name || "User"
-  };
-
-  backend.setRole(this.state.role);
+    backend.setRole(this.state.role);
     this.db = { items: [], invoices: [], services: [], returns: [], customers: [], movements: [] };
     this.routes = {
       dashboard: () => this.renderDashboard(),
@@ -138,34 +141,54 @@ class AppAgent {
 
   async init() {
     try {
+      console.log('init() called, setting up backend headers...');
+      // Get current user info and set backend headers
+      const user = getUser();
+      console.log('Current user:', user);
+      if (user && user.id) {
+        backend.setUserId(user.id);
+        console.log('Set userId:', user.id);
+      }
+      backend.setRole(this.state.role);
+      console.log('Set role:', this.state.role);
+      
+      // Load data with proper role-based filtering
+      console.log('Loading data from backend...');
       await backend.loadAll({ invoices: true, returns: true, movements: true });
+      console.log('Data loaded, syncing...');
       await this.syncFromBackend();
-      this.applyRoleUI(this.state.role, { initial: true });
+      console.log('Data synced, applying role UI...');
+      await this.applyRoleUI(this.state.role, { initial: true });
+      console.log('Role UI applied, going to view:', this.state.view);
       this.go(this.state.view);
     } catch (e) {
-      console.error(e);
+      console.error('init() failed:', e);
       alert("Failed to load data from backend: " + e.message);
     }
   }
 
   async syncFromBackend() {
-  const hasList = (ns) => ns && typeof ns.list === 'function';
+    console.log('syncFromBackend() called');
+    const hasList = (ns) => ns && typeof ns.list === 'function';
 
-  const itemsRaw = hasList(backend.items) ? backend.items.list() : [];
-  const itemsApiById = new Map(itemsRaw.map((d) => [String(d._id), toUIItem(d)]));
+    const itemsRaw = hasList(backend.items) ? backend.items.list() : [];
+    console.log('Items loaded:', itemsRaw.length);
+    const itemsApiById = new Map(itemsRaw.map((d) => [String(d._id), toUIItem(d)]));
 
-  this.db.items     = itemsRaw.map(toUIItem);
-  this.db.customers = hasList(backend.customers) ? backend.customers.list() : [];
-  this.db.services  = hasList(backend.services)  ? backend.services.list()  : [];
-  this.db.invoices  = hasList(backend.invoices)  ? backend.invoices.list().map((inv) => toUIInvoice(inv, itemsApiById)) : [];
-  this.db.returns   = hasList(backend.returns)   ? backend.returns.list()   : [];
-  this.db.movements = hasList(backend.movements) ? backend.movements.list().map((m) => toUIMovement(m, itemsApiById)) : [];
-}
+    this.db.items     = itemsRaw.map(toUIItem);
+    this.db.customers = hasList(backend.customers) ? backend.customers.list() : [];
+    this.db.services  = hasList(backend.services)  ? backend.services.list()  : [];
+    this.db.invoices  = hasList(backend.invoices)  ? backend.invoices.list().map((inv) => toUIInvoice(inv, itemsApiById)) : [];
+    this.db.returns   = hasList(backend.returns)   ? backend.returns.list()   : [];
+    this.db.movements = hasList(backend.movements) ? backend.movements.list().map((m) => toUIMovement(m, itemsApiById)) : [];
+    
+    console.log('Database synced - Items:', this.db.items.length, 'Invoices:', this.db.invoices.length);
+  }
 
   persist() { Store.set("role", this.state.role); }
 
   // ---- role UI
-applyRoleUI(role, { initial = false } = {}) {
+  async applyRoleUI(role, { initial = false } = {}) {
    const navBtns = $$('#nav button');
    navBtns.forEach(b => b.style.display = 'none');
 
@@ -222,25 +245,37 @@ applyRoleUI(role, { initial = false } = {}) {
      localStorage.setItem('auth.user', JSON.stringify(user));
    }
 
-   // Update backend role
+   // Update backend role and userId
    backend.setRole(role);
+   if (user && user.id) {
+     backend.setUserId(user.id);
+   }
 
    // Save role to storage
    Store.set('role', role);
 
-   // Go to dashboard after role change
+   // Refresh data with new role if not initial load
    if (!initial) {
-     this.go('dashboard');
+     try {
+       await backend.items.refresh(); // This will now use role-filtered data
+       await this.syncFromBackend();
+       this.go('dashboard');
+     } catch (e) {
+       console.error('Failed to refresh data with new role:', e);
+       this.go('dashboard');
+     }
    }
  }
 
   // ---- Router
   go(view) {
+    console.log('go() called with view:', view);
     if (view === "reports" && this.state.role !== "admin") { this.toast("Access denied — reports are for admins only"); view = "dashboard"; }
     this.state.view = view;
     $("#view").innerHTML = "";
     $$("#nav [data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
     const route = this.routes[view];
+    console.log('Route found:', route);
     route ? route() : this.toast("Unknown view");
   }
 
@@ -332,19 +367,17 @@ applyRoleUI(role, { initial = false } = {}) {
     let items = this.db.items
       .filter((i) => [i.name, i.code, i.supplier].join(" ").toLowerCase().includes(q));
 
-    // For agent, only show assigned items; if none are assigned, show empty.
-    if (this.state.role === 'agent') {
-      const user = getUser();
-      if (user) {
-        const assignmentKey = `assignments_items_${user.name}`;
-        const assigned = JSON.parse(localStorage.getItem(assignmentKey) || '[]');
-        items = (Array.isArray(assigned) && assigned.length > 0)
-          ? items.filter(i => assigned.includes(i.id))
-          : [];
-      }
-    }
-
     const isAdmin = this.state.role === "admin";
+    const isAgent = this.state.role === "agent";
+    
+    // Show role-based information
+    let roleInfo = "";
+    if (isAgent) {
+      const itemCount = items.length;
+      roleInfo = `<div class="badge" style="margin-bottom: 10px; background: #3b82f6; color: white;">
+        Agent View: Showing ${itemCount} assigned item${itemCount !== 1 ? 's' : ''}
+      </div>`;
+    }
     const rows = items
       .map((i) => `
         <tr>
@@ -368,6 +401,7 @@ applyRoleUI(role, { initial = false } = {}) {
         <button class="primary" id="addItemBtn">+ Add Item</button>
         ${exportInvBtn}
       </div>
+      ${roleInfo}
       <div class="card">
         <table class="table">
           <thead><tr><th>Item</th><th>Qty</th><th>Purchase</th><th>Selling</th><th>Supplier</th><th></th></tr></thead>
@@ -895,12 +929,15 @@ printInvoice(inv) {
 
   // ---- Global bindings (delegation)
   bindGlobal() {
+    console.log('bindGlobal called, setting up event listeners...');
     const nav = document.querySelector("#nav");
+    console.log('Nav element found:', nav);
     if (nav) {
       nav.addEventListener("click", (e) => {
         const tgt = e.target.closest("[data-view]");
         if (!tgt) return;
         e.preventDefault();
+        console.log('Navigation clicked:', tgt.dataset.view);
         this.go(tgt.dataset.view);
       });
     }
@@ -920,4 +957,12 @@ printInvoice(inv) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => new AppAgent($("#view")));
+window.addEventListener("DOMContentLoaded", () => {
+  console.log('DOM loaded, initializing AppAgent...');
+  try {
+    new AppAgent($("#view"));
+    console.log('AppAgent initialized successfully');
+  } catch (e) {
+    console.error('Failed to initialize AppAgent:', e);
+  }
+});

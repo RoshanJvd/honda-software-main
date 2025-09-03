@@ -1,618 +1,604 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Master Honda — Spare Parts & Workshop Suite</title>
-    <meta name="theme-color" content="#d32f2f" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" href="Atlas-Honda-logo.jpg" sizes="192x192" />
-    <link rel="stylesheet" href="style.css" />
 
-    <!-- Chart.js, jsPDF, XLSX, QR libs (UMD builds) -->
-    <!-- third-party libs (UMD builds, no modules needed) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.13/minified/html5-qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Master Honda — Spare Parts & Workshop Suite</title>
+  <meta name="theme-color" content="#d32f2f" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="Atlas-Honda-logo.jpg" sizes="192x192" />
+  <link rel="stylesheet" href="style.css" />
 
-    <!-- your app (as ES modules) -->
-    <script type="module" src="./api.js"></script>
-    <script>
-      // Prefer local backend when running on localhost/127.0.0.1
-      (function(){
-        const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-        if (isLocal) {
-          const host = location.hostname; // keep localhost vs 127.0.0.1 consistent
-          window.__API_BASE = `http://${host}:4000/api`;
-        } else {
-          window.__API_BASE = "https://honda-software-main.onrender.com/api";
-        }
-      })();
-    </script>
-    <script>
-      window.ADMIN_KEY = window.ADMIN_KEY || "yahya123";
-    </script>
-    <script type="module" src="./backend.js"></script>
-    <script type="module" src="./barcode-helper.js"></script>
-    <script type="module" src="./APP.JS"></script>
-  </head>
-  <body>
-    <button
-      id="installPWA"
-      style="
+  <!-- Chart.js, jsPDF, XLSX, QR libs (UMD builds) -->
+  <!-- third-party libs (UMD builds, no modules needed) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.13/minified/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <!-- your app (as ES modules) -->
+  <script type="module" src="./api.js"></script>
+  <script>
+    // Prefer local backend when running on localhost/127.0.0.1
+    (function () {
+      const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+      if (isLocal) {
+        const host = location.hostname; // keep localhost vs 127.0.0.1 consistent
+        window.__API_BASE = `http://${host}:4000/api`;
+      } else {
+        window.__API_BASE = "https://honda-software-main.onrender.com/api";
+      }
+    })();
+  </script>
+  <script>
+    window.ADMIN_KEY = window.ADMIN_KEY || "yahya123";
+  </script>
+  <script type="module" src="./backend.js"></script>
+  <script type="module" src="./barcode-helper.js"></script>
+  <script type="module" src="./APP.JS"></script>
+</head>
+
+<body>
+  <button id="installPWA" style="
         display: none;
         position: fixed;
         bottom: 20px;
         right: 20px;
         z-index: 1000;
-      "
-    >
-      Install App
-    </button>
-    <!-- Auth Modal for Role Switch -->
+      ">
+    Install App
+  </button>
+  <!-- Auth Modal for Role Switch -->
 
-    <div class="app">
-      <!-- Sidebar -->
-      <aside class="sidebar" id="sidebar">
-        <div class="brand">
-          <img
-            src="Atlas-Honda-logo.jpg"
-            alt="Atlas Honda"
-            onerror="this.style.display='none'"
-          />
-          <div>
-            <h1>Master Honda</h1>
-            <small>Spare Parts & Workshop</small>
-          </div>
-          <!-- Example in your top bar -->
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img src="Atlas-Honda-logo.jpg" alt="Atlas Honda" onerror="this.style.display='none'" />
+        <div>
+          <h1>Master Honda</h1>
+          <small>Spare Parts & Workshop</small>
         </div>
+        <!-- Example in your top bar -->
+      </div>
 
-        <nav id="nav">
-          <button data-view="dashboard" class="active">Dashboard</button>
-          <button data-view="inventory">Inventory</button>
-          <button data-view="billing">Billing</button>
-          <button data-view="returns">Returns/Refunds</button>
-          <button data-view="workshop">Service Jobs</button>
-          <button data-view="reports">Reports</button>
-        </nav>
-        <div
-          id="userArea"
-          style="
+      <nav id="nav">
+        <button data-view="dashboard" class="active">Dashboard</button>
+        <button data-view="inventory">Inventory</button>
+        <button data-view="billing">Billing</button>
+        <button data-view="returns">Returns/Refunds</button>
+        <button data-view="workshop">Service Jobs</button>
+        <button data-view="reports">Reports</button>
+      </nav>
+      <div id="userArea" style="
             margin-left: auto;
             display: flex;
             gap: 10px;
             align-items: center;
-          "
-        >
-          <span id="userBadge" class="badge"></span>
-          <button id="logoutBtn" class="ghost">Logout</button>
-        </div>
-        <footer class="sidebar-footer">
-          v1.2 — SPA (LocalStorage)
-          <div class="muted">Admin • Agent</div>
-        </footer>
-      </aside>
+          ">
+        <span id="userBadge" class="badge"></span>
+        <button id="logoutBtn" class="ghost">Logout</button>
+      </div>
+      <footer class="sidebar-footer">
+        v1.2 — SPA (LocalStorage)
+        <div class="muted">Admin • Agent</div>
+      </footer>
+    </aside>
 
-      <!-- Main -->
-      <main class="main">
-        <!-- Topbar -->
-        <header class="topbar">
-          <button class="hamburger" id="hamburger" aria-label="Toggle Menu">
-            ☰
-          </button>
-          <input
-            id="globalSearch"
-            type="search"
-            placeholder="Search items, invoices, customers…"
-          />
-          <div class="right">
-            <label class="role">
-              Role
-              <select id="roleSelect">
-                <option value="admin">Admin</option>
-                <option value="agent" selected>Agent</option>
-              </select>
-            </label>
-            <button id="manageUsersBtn" class="ghost" style="display:none;margin-left:8px">Manage Users</button>
-            <button id="assignItemsBtn" class="ghost" style="display:none;margin-left:8px">Assign Items</button>
-            <div class="menu">
-              <button id="backupBtn" title="Export backup">⭳</button>
-              <button id="restoreBtn" title="Import backup">⭱</button>
-              <input
-                id="restoreFile"
-                type="file"
-                accept="application/json"
-                hidden
-              />
-            </div>
-          </div>
-        </header>
-
-        <!-- Dynamic View -->
-        <section id="view" class="view"></section>
-      </main>
-    </div>
-
-    <!-- Inventory Modal -->
-    <dialog id="itemModal">
-      <form method="dialog" id="itemForm" class="modal">
-        <h3 id="itemModalTitle">Add Item</h3>
-        <div class="grid2">
-          <label> Name <input name="name" required /> </label>
-          <label> Code <input name="code" required /> </label>
-          <label>
-            Qty <input name="qty" type="number" min="0" step="1" required />
-          </label>
-          <label>
-            Low Stock
-            <input name="low" type="number" min="0" step="1" value="5" />
-          </label>
-          <label>
-            Purchase
-            <input name="buy" type="number" min="0" step="0.01" required />
-          </label>
-          <label>
-            Sell
-            <input name="sell" type="number" min="0" step="0.01" required />
-          </label>
-          <label class="full"> Supplier <input name="supplier" /> </label>
-          <label> Barcode/QR <input name="barcode" placeholder="SKU or barcode" /></label>
-          <label class="full">
-            Description <textarea name="desc" rows="2"></textarea>
-          </label>
-        </div>
-        <menu>
-          <button value="cancel" class="ghost">Cancel</button>
-          <button value="ok" class="primary">Save</button>
-        </menu>
-      </form>
-    </dialog>
-
-    <!-- Manage Users Modal (admin only) -->
-    <dialog id="usersModal">
-      <form id="usersForm" class="modal">
-        <h3>Manage Users</h3>
-        <div>
-          <label>Name <input id="newUserName" /></label>
-          <label>Role
-            <select id="newUserRole">
-              <option value="agent">Agent</option>
+    <!-- Main -->
+    <main class="main">
+      <!-- Topbar -->
+      <header class="topbar">
+        <button class="hamburger" id="hamburger" aria-label="Toggle Menu">
+          ☰
+        </button>
+        <input id="globalSearch" type="search" placeholder="Search items, invoices, customers…" />
+        <div class="right">
+          <label class="role">
+            Role
+            <select id="roleSelect">
               <option value="admin">Admin</option>
+              <option value="agent" selected>Agent</option>
             </select>
           </label>
-          <label>Password <input id="newUserPass" type="password"/></label>
+          <button id="manageUsersBtn" class="ghost" style="display:none;margin-left:8px">Manage Users</button>
+          <button id="assignItemsBtn" class="ghost" style="display:none;margin-left:8px">Assign Items</button>
+          <div class="menu">
+            <button id="backupBtn" title="Export backup">⭳</button>
+            <button id="restoreBtn" title="Import backup">⭱</button>
+            <input id="restoreFile" type="file" accept="application/json" hidden />
+          </div>
         </div>
-        <div style="margin-top:8px">
-          <button id="addUserBtn" class="primary">Add User</button>
-          <button id="closeUsers" class="ghost">Close</button>
-        </div>
-        <div id="usersList" style="margin-top:10px"></div>
-      </form>
-    </dialog>
+      </header>
 
-    <!-- Assign Items/Services Modal (admin only) -->
-    <dialog id="assignModal">
-      <form id="assignForm" class="modal">
-        <h3>Assign Items & Services to Users</h3>
-        <div class="grid2">
-          <label>Select User
-            <select id="assignUser">
-              <option value="">Select a user...</option>
-            </select>
-          </label>
-          <label>Type
-            <select id="assignType">
-              <option value="items">Items</option>
-              <option value="services">Services</option>
-            </select>
-          </label>
-        </div>
-        <div style="margin-top:10px">
-          <label>Search Items/Services
-            <input id="assignSearch" placeholder="Type to search..."/>
-          </label>
-        </div>
-        <div id="assignList" style="max-height:200px;overflow-y:auto;margin-top:10px;border:1px solid #ddd;padding:10px"></div>
-        <div style="margin-top:10px">
-          <button id="saveAssignments" class="primary">Save Assignments</button>
-          <button id="closeAssign" class="ghost">Close</button>
-        </div>
-      </form>
-    </dialog>
+      <!-- Dynamic View -->
+      <section id="view" class="view"></section>
+    </main>
+  </div>
 
-    <!-- Auth Modal for Role Switch (was missing elements causing cancelBtn undefined) -->
-    <dialog id="authModal">
-      <form method="dialog" id="authForm" class="modal">
-        <h3>Authenticate Role</h3>
-        <div class="grid2">
-          <label>Username <input id="authUsername" required /></label>
-          <label>Password <input id="authPassword" type="password" required /></label>
-        </div>
-        <div id="authError" style="color:#b91c1c;display:none;margin-top:6px"></div>
-        <menu>
-          <button id="cancelBtn" value="cancel" class="ghost">Cancel</button>
-          <button type="submit" value="ok" class="primary">Login</button>
-        </menu>
-      </form>
-    </dialog>
+  <!-- Inventory Modal -->
+  <dialog id="itemModal">
+    <form method="dialog" id="itemForm" class="modal">
+      <h3 id="itemModalTitle">Add Item</h3>
+      <div class="grid2">
+        <label> Name <input name="name" required /> </label>
+        <label> Code <input name="code" required /> </label>
+        <label>
+          Qty <input name="qty" type="number" min="0" step="1" required />
+        </label>
+        <label>
+          Low Stock
+          <input name="low" type="number" min="0" step="1" value="5" />
+        </label>
+        <label>
+          Purchase
+          <input name="buy" type="number" min="0" step="0.01" required />
+        </label>
+        <label>
+          Sell
+          <input name="sell" type="number" min="0" step="0.01" required />
+        </label>
+        <label class="full"> Supplier <input name="supplier" /> </label>
+        <label> Barcode/QR <input name="barcode" placeholder="SKU or barcode" /></label>
+        <label class="full">
+          Description <textarea name="desc" rows="2"></textarea>
+        </label>
+      </div>
+      <menu>
+        <button type="button" value="cancel" class="ghost"
+          onclick="document.getElementById('itemModal').close()">Cancel</button>
+        <button value="ok" class="primary">Save</button>
+      </menu>
+    </form>
+  </dialog>
 
-    <!-- Toast container -->
-    <div id="toast"></div>
+  <!-- Manage Users Modal (admin only) -->
+  <dialog id="usersModal">
+    <form id="usersForm" class="modal">
+      <h3>Manage Users</h3>
+      <div>
+        <label>Name <input id="newUserName" /></label>
+        <label>Role
+          <select id="newUserRole">
+            <option value="agent">Agent</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+        <label>Password <input id="newUserPass" type="password" /></label>
+      </div>
+      <div style="margin-top:8px">
+        <button id="addUserBtn" class="primary">Add User</button>
+        <button id="closeUsers" class="ghost">Close</button>
+      </div>
+      <div id="usersList" style="margin-top:10px"></div>
+    </form>
+  </dialog>
 
-    <!-- App Logic -->
-    <script>
-      // Logout button logic
-      const logoutBtn = document.getElementById("logoutBtn");
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", () => {
-          localStorage.removeItem('auth.user');
-          sessionStorage.clear();
-          window.location.href = "login.html";
-        });
+  <!-- Assign Items/Services Modal (admin only) -->
+  <dialog id="assignModal">
+    <form id="assignForm" class="modal">
+      <h3>Assign Items & Services to Users</h3>
+      <div class="grid2">
+        <label>Select User
+          <select id="assignUser">
+            <option value="">Select a user...</option>
+          </select>
+        </label>
+        <label>Type
+          <select id="assignType">
+            <option value="items">Items</option>
+            <option value="services">Services</option>
+          </select>
+        </label>
+      </div>
+      <div style="margin-top:10px">
+        <label>Search Items/Services
+          <input id="assignSearch" placeholder="Type to search..." />
+        </label>
+      </div>
+      <div id="assignList" style="max-height:200px;overflow-y:auto;margin-top:10px;border:1px solid #ddd;padding:10px">
+      </div>
+      <div style="margin-top:10px">
+        <button id="saveAssignments" class="primary">Save Assignments</button>
+        <button id="closeAssign" class="ghost">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Auth Modal for Role Switch (was missing elements causing cancelBtn undefined) -->
+  <dialog id="authModal">
+    <form method="dialog" id="authForm" class="modal">
+      <h3>Authenticate Role</h3>
+      <div class="grid2">
+        <label>Username <input id="authUsername" required /></label>
+        <label>Password <input id="authPassword" type="password" required /></label>
+      </div>
+      <div id="authError" style="color:#b91c1c;display:none;margin-top:6px"></div>
+      <menu>
+        <button id="cancelBtn" value="cancel" class="ghost">Cancel</button>
+        <button type="submit" value="ok" class="primary">Login</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Toast container -->
+  <div id="toast"></div>
+
+  <!-- App Logic -->
+  <script>
+    // Logout button logic
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        localStorage.removeItem('auth.user');
+        sessionStorage.clear();
+        window.location.href = "login.html";
+      });
+    }
+    // Force login screen on every app load
+    (function forceLoginOnLoad() {
+      const user = localStorage.getItem('auth.user');
+      if (!user) {
+        window.location.href = "login.html";
       }
-      // Force login screen on every app load
-      (function forceLoginOnLoad() {
-        const user = localStorage.getItem('auth.user');
-        if (!user) {
-          window.location.href = "login.html";
+    })();
+    // --- Auth for Role Switch ---
+    const roleSelect = document.getElementById("roleSelect");
+    const authModal = document.getElementById("authModal");
+    const authForm = document.getElementById("authForm");
+    const authError = document.getElementById("authError");
+    const cancelBtn = document.getElementById("cancelBtn");
+    let lastRole = roleSelect ? roleSelect.value : 'agent';
+    let pendingRole = null;
+    // Auth modal handling: validate admin using ADMIN_KEY; agent requires no password
+    if (roleSelect) {
+      roleSelect.addEventListener("change", (e) => {
+        const selectedRole = e.target.value;
+        if (authError) authError.style.display = "none";
+        if (authForm) authForm.reset();
+        if (selectedRole === "admin" || selectedRole === "agent") {
+          pendingRole = selectedRole;
+          if (authModal) authModal.showModal();
         }
-      })();
-  // --- Auth for Role Switch ---
-  const roleSelect = document.getElementById("roleSelect");
-  const authModal = document.getElementById("authModal");
-  const authForm = document.getElementById("authForm");
-  const authError = document.getElementById("authError");
-  const cancelBtn = document.getElementById("cancelBtn");
-  let lastRole = roleSelect ? roleSelect.value : 'agent';
-  let pendingRole = null;
-      // Auth modal handling: validate admin using ADMIN_KEY; agent requires no password
-      if (roleSelect) {
-        roleSelect.addEventListener("change", (e) => {
-          const selectedRole = e.target.value;
-          if (authError) authError.style.display = "none";
-          if (authForm) authForm.reset();
-          if (selectedRole === "admin" || selectedRole === "agent") {
-            pendingRole = selectedRole;
-            if (authModal) authModal.showModal();
-          }
-        });
-      }
+      });
+    }
 
-      // Handle Cancel button / closing the dialog (guard nulls)
-      if (cancelBtn) {
-        cancelBtn.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          if (authModal) authModal.close(); // closes modal
-          if (roleSelect) roleSelect.value = lastRole; // revert role
-          pendingRole = null;
-          if (authError) authError.style.display = "none";
-        });
-      }
+    // Handle Cancel button / closing the dialog (guard nulls)
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        if (authModal) authModal.close(); // closes modal
+        if (roleSelect) roleSelect.value = lastRole; // revert role
+        pendingRole = null;
+        if (authError) authError.style.display = "none";
+      });
+    }
 
-      // Handle Login (use ADMIN_KEY for admin)
-      if (authForm) {
-        authForm.addEventListener("submit", (e) => {
-          e.preventDefault();
-
-          const password = document.getElementById("authPassword")?.value.trim() || '';
-
-          if (!pendingRole) {
-            if (authError) { authError.textContent = 'No role selected'; authError.style.display = 'block'; }
-            return;
-          }
-
-          if (pendingRole === 'admin') {
-            if (password !== (window.ADMIN_KEY || 'yahya123')) {
-              if (authError) { authError.textContent = 'Invalid admin password!'; authError.style.display = 'block'; }
-              if (roleSelect) roleSelect.value = lastRole;
-              return;
-            }
-          }
-
-          // success: accept agent or admin
-          lastRole = pendingRole;
-          if (roleSelect) roleSelect.value = pendingRole;
-          pendingRole = null;
-          if (authError) authError.style.display = 'none';
-          if (authModal) authModal.close();
-        });
-      }
-
-      // Optional: support Esc key to cancel (guard)
-      if (authModal) {
-        authModal.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") {
-            authModal.close("cancel");
-          }
-        });
-      }
-
-      // Register the Service Worker
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", function () {
-          navigator.serviceWorker
-            .register("./service-worker.js")
-            .then((reg) => console.log("SW registered:", reg))
-            .catch((err) => console.log("SW registration failed:", err));
-        });
-      }
-
-      // PWA install prompt logic
-      let deferredPrompt;
-      const installBtn = document.getElementById("installPWA");
-
-      window.addEventListener("beforeinstallprompt", (e) => {
+    // Handle Login (use ADMIN_KEY for admin)
+    if (authForm) {
+      authForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        console.log("beforeinstallprompt fired!", e); // Prevent Chrome's default mini-infobar
-        deferredPrompt = e; // Save the event
-        installBtn.style.display = "block"; // Show your custom button
-      });
 
-      installBtn.addEventListener("click", () => {
-        installBtn.style.display = "none";
-        if (deferredPrompt) {
-          console.log("User choice:", choice.outcome);
-          deferredPrompt.prompt(); // Show install prompt
-          deferredPrompt.userChoice.then((choiceResult) => {
-            deferredPrompt = null; // Reset
-          });
-        }
-      });
+        const password = document.getElementById("authPassword")?.value.trim() || '';
 
-      // --- Manage Users (Admin only) ---
-      const manageUsersBtn = document.getElementById('manageUsersBtn');
-      const usersModal = document.getElementById('usersModal');
-      const usersForm = document.getElementById('usersForm');
-      const addUserBtn = document.getElementById('addUserBtn');
-      const closeUsers = document.getElementById('closeUsers');
-      const usersList = document.getElementById('usersList');
-
-      async function loadUsers() {
-        try {
-          const response = await fetch(window.__API_BASE + '/users', {
-            headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            return data.data || [];
-          }
-          return [];
-        } catch (e) {
-          console.error('Failed to load users:', e);
-          return [];
-        }
-      }
-
-      async function renderUsers() {
-        const users = await loadUsers();
-        if (!usersList) return;
-        if (!users.length) {
-          usersList.innerHTML = '<div class="muted">No users found. Use the form above to add users.</div>';
+        if (!pendingRole) {
+          if (authError) { authError.textContent = 'No role selected'; authError.style.display = 'block'; }
           return;
         }
-        usersList.innerHTML = users.map((u) =>
-          `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee">
+
+        if (pendingRole === 'admin') {
+          if (password !== (window.ADMIN_KEY || 'yahya123')) {
+            if (authError) { authError.textContent = 'Invalid admin password!'; authError.style.display = 'block'; }
+            if (roleSelect) roleSelect.value = lastRole;
+            return;
+          }
+        }
+
+        // success: accept agent or admin
+        lastRole = pendingRole;
+        if (roleSelect) roleSelect.value = pendingRole;
+        pendingRole = null;
+        if (authError) authError.style.display = 'none';
+        if (authModal) authModal.close();
+      });
+    }
+
+    // Optional: support Esc key to cancel (guard)
+    if (authModal) {
+      authModal.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          authModal.close("cancel");
+        }
+      });
+    }
+
+    // Register the Service Worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker
+          .register("./service-worker.js")
+          .then((reg) => console.log("SW registered:", reg))
+          .catch((err) => console.log("SW registration failed:", err));
+      });
+    }
+
+    // PWA install prompt logic
+    let deferredPrompt;
+    const installBtn = document.getElementById("installPWA");
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      console.log("beforeinstallprompt fired!", e); // Prevent Chrome's default mini-infobar
+      deferredPrompt = e; // Save the event
+      installBtn.style.display = "block"; // Show your custom button
+    });
+
+    installBtn.addEventListener("click", () => {
+      installBtn.style.display = "none";
+      if (deferredPrompt) {
+        console.log("User choice:", choice.outcome);
+        deferredPrompt.prompt(); // Show install prompt
+        deferredPrompt.userChoice.then((choiceResult) => {
+          deferredPrompt = null; // Reset
+        });
+      }
+    });
+
+    // --- Manage Users (Admin only) ---
+    const manageUsersBtn = document.getElementById('manageUsersBtn');
+    const usersModal = document.getElementById('usersModal');
+    const usersForm = document.getElementById('usersForm');
+    const addUserBtn = document.getElementById('addUserBtn');
+    const closeUsers = document.getElementById('closeUsers');
+    const usersList = document.getElementById('usersList');
+
+    async function loadUsers() {
+      try {
+        const response = await fetch(window.__API_BASE + '/users', {
+          headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          return data.data || [];
+        }
+        return [];
+      } catch (e) {
+        console.error('Failed to load users:', e);
+        return [];
+      }
+    }
+
+    async function renderUsers() {
+      const users = await loadUsers();
+      if (!usersList) return;
+      if (!users.length) {
+        usersList.innerHTML = '<div class="muted">No users found. Use the form above to add users.</div>';
+        return;
+      }
+      usersList.innerHTML = users.map((u) =>
+        `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee">
             <div><strong>${escapeHtml(u.name)}</strong> <small class="muted">${escapeHtml(u.role)}</small></div>
-            <div><button class="ghost delUserBtn" data-id="${u._id}">Delete</button></div>
+            <div><button type="button" class="ghost delUserBtn" data-id="${u._id}">Delete</button></div>
           </div>`
-        ).join('');
-      }
+      ).join('');
+    }
 
-      // small helper to avoid simple HTML injection
-      function escapeHtml(s){
-        return String(s||'').replace(/[&<>"']/g, function(c){
-          return ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-          })[c] || c;
-        });
-      }
+    // small helper to avoid simple HTML injection
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, function (c) {
+        return ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        })[c] || c;
+      });
+    }
 
-      // Show Manage Users button only for admin users
-      (function initManageUsersButton(){
+    // Show Manage Users button only for admin users
+    (function initManageUsersButton() {
+      try {
+        const current = JSON.parse(localStorage.getItem('auth.user') || 'null');
+        if (manageUsersBtn) manageUsersBtn.style.display = (current && current.role === 'admin') ? 'inline-block' : 'none';
+      } catch (e) {
+        if (manageUsersBtn) manageUsersBtn.style.display = 'none';
+      }
+    })();
+
+    if (manageUsersBtn) {
+      manageUsersBtn.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const current = JSON.parse(localStorage.getItem('auth.user') || 'null');
+        if (!current || current.role !== 'admin') return alert('Only admins can manage users');
+        if (usersModal) usersModal.showModal();
+        renderUsers();
+      });
+    }
+
+    if (addUserBtn) {
+      addUserBtn.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        const name = document.getElementById('newUserName')?.value?.trim();
+        const role = document.getElementById('newUserRole')?.value || 'inventory';
+        const pass = document.getElementById('newUserPass')?.value || '';
+
+        if (!name) return alert('Name is required');
+
         try {
-          const current = JSON.parse(localStorage.getItem('auth.user')||'null');
-          if (manageUsersBtn) manageUsersBtn.style.display = (current && current.role === 'admin') ? 'inline-block' : 'none';
-        } catch(e) {
-          if (manageUsersBtn) manageUsersBtn.style.display = 'none';
-        }
-      })();
-
-      if (manageUsersBtn) {
-        manageUsersBtn.addEventListener('click', (ev) => {
-          ev.preventDefault();
-          const current = JSON.parse(localStorage.getItem('auth.user')||'null');
-          if (!current || current.role !== 'admin') return alert('Only admins can manage users');
-          if (usersModal) usersModal.showModal();
-          renderUsers();
-        });
-      }
-
-      if (addUserBtn) {
-        addUserBtn.addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          const name = document.getElementById('newUserName')?.value?.trim();
-          const role = document.getElementById('newUserRole')?.value || 'inventory';
-          const pass = document.getElementById('newUserPass')?.value || '';
-
-          if (!name) return alert('Name is required');
-
-          try {
-            // Check for duplicate users
-            const users = await loadUsers();
-            const exists = users.find(u => u.name.toLowerCase() === name.toLowerCase() && u.role === role);
-            if (exists) return alert('User with same name and role already exists');
-
-            // Create user via backend API
-            const response = await fetch(window.__API_BASE + '/users', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-role': 'admin'
-              },
-              body: JSON.stringify({ name, role, password: pass })
-            });
-
-            if (response.ok) {
-              const newUser = await response.json();
-              alert(`User "${name}" created successfully!`);
-              // clear inputs
-              document.getElementById('newUserName').value = '';
-              document.getElementById('newUserPass').value = '';
-              document.getElementById('newUserRole').value = 'inventory';
-              renderUsers();
-            } else {
-              const error = await response.json();
-              alert('Failed to create user: ' + (error.message || 'Unknown error'));
-            }
-          } catch (error) {
-            console.error('Error creating user:', error);
-            alert('Error creating user: ' + error.message);
-          }
-        });
-      }
-
-      if (closeUsers) {
-        closeUsers.addEventListener('click', (ev) => {
-          ev.preventDefault();
-          if (usersModal) usersModal.close();
-        });
-      }
-
-      // Delegate delete clicks
-      if (usersList) {
-        usersList.addEventListener('click', async (ev) => {
-          const btn = ev.target.closest('.delUserBtn');
-          if (!btn) return;
-          const userId = btn.dataset.id;
-          if (!userId) return;
-
+          // Check for duplicate users
           const users = await loadUsers();
-          const u = users.find(user => user._id === userId);
-          if (!u) return;
+          const exists = users.find(u => u.name.toLowerCase() === name.toLowerCase() && u.role === role);
+          if (exists) return alert('User with same name and role already exists');
 
-          if (!confirm(`Delete user ${u.name} (${u.role})?`)) return;
+          // Create user via backend API
+          const response = await fetch(window.__API_BASE + '/users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-role': 'admin'
+            },
+            body: JSON.stringify({ name, role, password: pass })
+          });
 
-          try {
-            const response = await fetch(window.__API_BASE + `/users/${userId}`, {
-              method: 'DELETE',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-role': 'admin'
-              }
-            });
+          if (response.ok) {
+            const newUser = await response.json();
+            alert(`User "${name}" created successfully!`);
+            // clear inputs
+            document.getElementById('newUserName').value = '';
+            document.getElementById('newUserPass').value = '';
+            document.getElementById('newUserRole').value = 'inventory';
+            renderUsers();
+          } else {
+            const error = await response.json();
+            alert('Failed to create user: ' + (error.message || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error('Error creating user:', error);
+          alert('Error creating user: ' + error.message);
+        }
+      });
+    }
 
-            if (response.ok) {
-              alert(`User "${u.name}" deleted successfully!`);
-              renderUsers();
-            } else {
-              const error = await response.json();
-              alert('Failed to delete user: ' + (error.message || 'Unknown error'));
+    if (closeUsers) {
+      closeUsers.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        if (usersModal) usersModal.close();
+      });
+    }
+
+    // Delegate delete clicks
+    if (usersList) {
+      usersList.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        const btn = ev.target.closest('.delUserBtn');
+        if (!btn) return;
+        const userId = btn.dataset.id;
+        if (!userId) return;
+
+        const users = await loadUsers();
+        const u = users.find(user => user._id === userId);
+        if (!u) return;
+
+        if (!confirm(`Delete user ${u.name} (${u.role})?`)) return;
+
+        try {
+          const response = await fetch(window.__API_BASE + `/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-role': 'admin'
             }
-          } catch (error) {
-            console.error('Error deleting user:', error);
-            alert('Error deleting user: ' + error.message);
+          });
+
+          if (response.ok) {
+            alert(`User "${u.name}" deleted successfully!`);
+            renderUsers();
+          } else {
+            const error = await response.json();
+            alert('Failed to delete user: ' + (error.message || 'Unknown error'));
           }
+        } catch (error) {
+          console.error('Error deleting user:', error);
+          alert('Error deleting user: ' + error.message);
+        }
+      });
+    }
+
+    // --- Assign Items/Services (Admin only) ---
+    const assignItemsBtn = document.getElementById('assignItemsBtn');
+    const assignModal = document.getElementById('assignModal');
+    const assignForm = document.getElementById('assignForm');
+    const assignUser = document.getElementById('assignUser');
+    const assignType = document.getElementById('assignType');
+    const assignSearch = document.getElementById('assignSearch');
+    const assignList = document.getElementById('assignList');
+    const saveAssignments = document.getElementById('saveAssignments');
+    const closeAssign = document.getElementById('closeAssign');
+
+    let currentAssignments = [];
+    let allItems = [];
+    let allServices = [];
+
+    // Show Assign Items button only for admin users
+    (function initAssignItemsButton() {
+      try {
+        const current = JSON.parse(localStorage.getItem('auth.user') || 'null');
+        if (assignItemsBtn) assignItemsBtn.style.display = (current && current.role === 'admin') ? 'inline-block' : 'none';
+      } catch (e) {
+        if (assignItemsBtn) assignItemsBtn.style.display = 'none';
+      }
+    })();
+
+    async function loadItemsAndServices() {
+      try {
+        // Load items and services from backend
+        const itemsResponse = await fetch(window.__API_BASE + '/items?limit=1000', {
+          headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
         });
-      }
+        const servicesResponse = await fetch(window.__API_BASE + '/services?limit=1000', {
+          headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
+        });
 
-      // --- Assign Items/Services (Admin only) ---
-      const assignItemsBtn = document.getElementById('assignItemsBtn');
-      const assignModal = document.getElementById('assignModal');
-      const assignForm = document.getElementById('assignForm');
-      const assignUser = document.getElementById('assignUser');
-      const assignType = document.getElementById('assignType');
-      const assignSearch = document.getElementById('assignSearch');
-      const assignList = document.getElementById('assignList');
-      const saveAssignments = document.getElementById('saveAssignments');
-      const closeAssign = document.getElementById('closeAssign');
-
-      let currentAssignments = [];
-      let allItems = [];
-      let allServices = [];
-
-      // Show Assign Items button only for admin users
-      (function initAssignItemsButton(){
-        try {
-          const current = JSON.parse(localStorage.getItem('auth.user')||'null');
-          if (assignItemsBtn) assignItemsBtn.style.display = (current && current.role === 'admin') ? 'inline-block' : 'none';
-        } catch(e) {
-          if (assignItemsBtn) assignItemsBtn.style.display = 'none';
+        if (itemsResponse.ok) {
+          const itemsData = await itemsResponse.json();
+          allItems = itemsData.data || [];
         }
-      })();
 
-      async function loadItemsAndServices() {
+        if (servicesResponse.ok) {
+          const servicesData = await servicesResponse.json();
+          allServices = servicesData.data || [];
+        }
+      } catch (e) {
+        console.error('Failed to load items/services:', e);
+      }
+    }
+
+    async function populateUserSelect() {
+      try {
+        const users = await backend.users.list();
+        if (!assignUser) return;
+        assignUser.innerHTML = '<option value="">Select a user...</option>';
+        users.forEach(user => {
+          assignUser.innerHTML += `<option value="${user._id}" data-name="${user.name}">${user.name} (${user.role})</option>`;
+        });
+      } catch (e) {
+        console.error('Failed to load users:', e);
+      }
+    }
+
+    async function renderAssignList() {
+      if (!assignList) return;
+      const type = assignType?.value || 'items';
+      const searchTerm = (assignSearch?.value || '').toLowerCase();
+      const items = type === 'items' ? allItems : allServices;
+
+      const filtered = items.filter(item =>
+        (item.name || '').toLowerCase().includes(searchTerm) ||
+        (item.sku || item.code || '').toLowerCase().includes(searchTerm)
+      );
+
+      // Load current assignments for selected user
+      const userId = assignUser?.value;
+      if (userId) {
         try {
-          // Load items and services from backend
-          const itemsResponse = await fetch(window.__API_BASE + '/items?limit=1000', {
-            headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
-          });
-          const servicesResponse = await fetch(window.__API_BASE + '/services?limit=1000', {
-            headers: { 'Content-Type': 'application/json', 'x-role': 'admin' }
-          });
-          
-          if (itemsResponse.ok) {
-            const itemsData = await itemsResponse.json();
-            allItems = itemsData.data || [];
-          }
-          
-          if (servicesResponse.ok) {
-            const servicesData = await servicesResponse.json();
-            allServices = servicesData.data || [];
-          }
+          const assignments = await backend.users.getAssignments(userId);
+          const assignedIds = type === 'items'
+            ? assignments.assignedItems.map(item => item._id)
+            : assignments.assignedServices.map(service => service._id);
+          currentAssignments = assignedIds;
         } catch (e) {
-          console.error('Failed to load items/services:', e);
+          console.error('Failed to load assignments:', e);
+          currentAssignments = [];
         }
       }
 
-      async function populateUserSelect() {
-        try {
-          const users = await backend.users.list();
-          if (!assignUser) return;
-          assignUser.innerHTML = '<option value="">Select a user...</option>';
-          users.forEach(user => {
-            assignUser.innerHTML += `<option value="${user._id}" data-name="${user.name}">${user.name} (${user.role})</option>`;
-          });
-        } catch (e) {
-          console.error('Failed to load users:', e);
-        }
-      }
-
-      async function renderAssignList() {
-        if (!assignList) return;
-        const type = assignType?.value || 'items';
-        const searchTerm = (assignSearch?.value || '').toLowerCase();
-        const items = type === 'items' ? allItems : allServices;
-        
-        const filtered = items.filter(item =>
-          (item.name || '').toLowerCase().includes(searchTerm) ||
-          (item.sku || item.code || '').toLowerCase().includes(searchTerm)
-        );
-
-        // Load current assignments for selected user
-        const userId = assignUser?.value;
-        if (userId) {
-          try {
-            const assignments = await backend.users.getAssignments(userId);
-            const assignedIds = type === 'items'
-              ? assignments.assignedItems.map(item => item._id)
-              : assignments.assignedServices.map(service => service._id);
-            currentAssignments = assignedIds;
-          } catch (e) {
-            console.error('Failed to load assignments:', e);
-            currentAssignments = [];
-          }
-        }
-
-        assignList.innerHTML = filtered.map(item => {
-          const isAssigned = currentAssignments.includes(item._id);
-          return `
+      assignList.innerHTML = filtered.map(item => {
+        const isAssigned = currentAssignments.includes(item._id);
+        return `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:5px;border-bottom:1px solid #eee">
               <div>
                 <strong>${escapeHtml(item.name)}</strong>
@@ -624,88 +610,100 @@
               </label>
             </div>
           `;
-        }).join('') || '<div class="muted">No items found</div>';
-      }
+      }).join('') || '<div class="muted">No items found</div>';
+    }
 
-      if (assignItemsBtn) {
-        assignItemsBtn.addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          const current = JSON.parse(localStorage.getItem('auth.user')||'null');
-          if (!current || current.role !== 'admin') return alert('Only admins can assign items');
-          
-          await loadItemsAndServices();
-          populateUserSelect();
-          currentAssignments = [];
-          if (assignModal) assignModal.showModal();
-          renderAssignList();
-        });
-      }
+    if (assignItemsBtn) {
+      assignItemsBtn.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        const current = JSON.parse(localStorage.getItem('auth.user') || 'null');
+        if (!current || current.role !== 'admin') return alert('Only admins can assign items');
 
-      if (assignType) {
-        assignType.addEventListener('change', renderAssignList);
-      }
+        await loadItemsAndServices();
+        populateUserSelect();
+        currentAssignments = [];
+        if (assignModal) assignModal.showModal();
+        renderAssignList();
+      });
+    }
 
-      if (assignSearch) {
-        assignSearch.addEventListener('input', renderAssignList);
-      }
+    if (assignType) {
+      assignType.addEventListener('change', renderAssignList);
+    }
 
-      if (assignUser) {
-        assignUser.addEventListener('change', () => {
-          currentAssignments = [];
-          renderAssignList();
-        });
-      }
+    if (assignSearch) {
+      assignSearch.addEventListener('input', renderAssignList);
+    }
 
-      if (assignList) {
-        assignList.addEventListener('change', (ev) => {
-          if (ev.target.type === 'checkbox') {
-            const itemId = ev.target.dataset.id;
-            if (ev.target.checked) {
-              if (!currentAssignments.includes(itemId)) {
-                currentAssignments.push(itemId);
-              }
-            } else {
-              const index = currentAssignments.indexOf(itemId);
-              if (index > -1) {
-                currentAssignments.splice(index, 1);
-              }
+    if (assignUser) {
+      assignUser.addEventListener('change', () => {
+        currentAssignments = [];
+        renderAssignList();
+      });
+    }
+
+    if (assignList) {
+      assignList.addEventListener('change', (ev) => {
+        if (ev.target.type === 'checkbox') {
+          const itemId = ev.target.dataset.id;
+          if (ev.target.checked) {
+            if (!currentAssignments.includes(itemId)) {
+              currentAssignments.push(itemId);
+            }
+          } else {
+            const index = currentAssignments.indexOf(itemId);
+            if (index > -1) {
+              currentAssignments.splice(index, 1);
             }
           }
-        });
-      }
+        }
+      });
+    }
 
-      if (saveAssignments) {
-        saveAssignments.addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          const userName = assignUser?.value;
-          const type = assignType?.value || 'items';
-          
-          if (!userName) return alert('Please select a user');
-          
-          try {
-            // Find user by name
-            const users = loadUsers();
-            const user = users.find(u => u.name === userName);
-            if (!user) return alert('User not found');
+    if (saveAssignments) {
+      saveAssignments.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        console.log('DEBUG: Save assignments clicked');
 
-            // Save assignments to localStorage for now (can be extended to backend)
-            const assignmentKey = `assignments_${type}_${userName}`;
-            localStorage.setItem(assignmentKey, JSON.stringify(currentAssignments));
-            
-            alert(`Successfully assigned ${currentAssignments.length} ${type} to ${userName}`);
-            if (assignModal) assignModal.close();
-          } catch (e) {
-            alert('Failed to save assignments: ' + e.message);
+        const userId = assignUser?.value;
+        const type = assignType?.value || 'items';
+
+        console.log('DEBUG: userId:', userId);
+        console.log('DEBUG: type:', type);
+        console.log('DEBUG: currentAssignments:', currentAssignments);
+
+        if (!userId) return alert('Please select a user');
+
+        try {
+          console.log('DEBUG: About to call backend API');
+
+          // Persist assignments via backend API (admin only)
+          if (type === 'items') {
+            console.log('DEBUG: Calling assignItems with:', userId, currentAssignments);
+            const result = await backend.users.assignItems(userId, currentAssignments);
+            console.log('DEBUG: assignItems result:', result);
+          } else {
+            console.log('DEBUG: Calling assignServices with:', userId, currentAssignments);
+            const result = await backend.users.assignServices(userId, currentAssignments);
+            console.log('DEBUG: assignServices result:', result);
           }
-        });
-      }
 
-      if (closeAssign) {
-        closeAssign.addEventListener('click', (ev) => {
-          ev.preventDefault();
+          alert(`Successfully assigned ${currentAssignments.length} ${type} to ${userId}`);
           if (assignModal) assignModal.close();
-        });
-      }
-    </script>
-  </body>
+        } catch (e) {
+          console.error('DEBUG: Assignment failed:', e);
+          alert('Failed to save assignments: ' + e.message);
+        }
+      });
+    }
+
+    if (closeAssign) {
+      closeAssign.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        if (assignModal) assignModal.close();
+      });
+    }
+  </script>
+</body>
+
 </html>
