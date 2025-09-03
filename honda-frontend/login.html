@@ -124,6 +124,18 @@
   </style>
   <!-- Admin key for this page (keep same as your app) -->
   <script>window.ADMIN_KEY = window.ADMIN_KEY || 'yahya123';</script>
+<script>
+  // Prefer local backend when running on localhost/127.0.0.1
+  (function () {
+    const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    if (isLocal) {
+      const host = location.hostname; // keep localhost vs 127.0.0.1 consistent
+      window.__API_BASE = `http://${host}:4000/api`;
+    } else {
+      window.__API_BASE = "https://honda-software-main.onrender.com/api";
+    }
+  })();
+</script>
 </head>
 <body>
   <div class="login-app">
